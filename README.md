@@ -82,6 +82,10 @@ The cost to rebalance the core portfolio is $264182.44
 This would make the total value of the portfolio: $7255107.64
 The total value of satellite and core portfolio after rebalancing would be $7378134.04
 ```
+Finally, to save the changes made to the closing price and the actual quantities of the assets in `portfolio_data.csv` in your portfolio type `y`.
+```
+Do you want to save and overwrite? (y/n)
+```
 
 Configuration
 You can adjust various settings in config.py to match your preferences, such as transaction limits or minimum cash reserve.
