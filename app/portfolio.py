@@ -151,19 +151,28 @@ class Portfolio():
         """
         logger.info("Updating portfolio prices")
         stock_pricer = StockPricer()
-        self.portfolio[['closing_price_new', 'update_date_new']] = self.portfolio.apply(
-            lambda x: stock_pricer.get_price(x.name, x['exchange']), axis=1).apply(pd.Series)
+        try:
+            self.portfolio[['closing_price_new', 'update_date_new']] = self.portfolio.apply(
+                    lambda x: stock_pricer.get_price(x.name, x['exchange']), axis=1).apply(pd.Series) 
+        except ValueError as e:
+            logger.error('Failed to update stock prices %s', e)
+            print('Failed to update stock prices. API may be at request limit.')
+            return self.portfolio
         
         logger.debug("Price update results:\n%s", self.portfolio[['closing_price_new', 'update_date_new']])
         
-        self.portfolio['closing_price'] = np.where(
-            self.portfolio.update_date < self.portfolio.update_date_new,
-            self.portfolio.closing_price_new,
-            self.portfolio.closing_price)
-        
-        logger.info("Prices updated where applicable")
-        self.portfolio.drop(columns=['closing_price_new', 'update_date_new'], inplace=True)
-        return self.portfolio
+        try:
+            self.portfolio['closing_price'] = np.where(
+                self.portfolio.update_date < self.portfolio.update_date_new,
+                self.portfolio.closing_price_new,
+                self.portfolio.closing_price)
+            
+            logger.info("Prices updated where applicable")
+            self.portfolio.drop(columns=['closing_price_new', 'update_date_new'], inplace=True)
+            return self.portfolio
+        except Exception as e:
+            logger.error('Failed to update prices for any ticker error:%s', e)
+            return self.portfolio
 
     def _rebalance_no_sell(self) -> None:
         """
