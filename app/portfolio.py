@@ -191,7 +191,7 @@ class Portfolio():
         self._rebalance_no_sell()
         df_report = self.core_portfolio.filter(['quantity', 'closing_price',
         'target_quantity_no_sell', 'rebalance_quantity_no_sell',
-       'rebalancing_cost_no_sell','update_date', ])
+       'rebalancing_cost_no_sell','update_date', ]).sort_values(by = 'rebalancing_cost_no_sell', ascending=False)
         
         total_rebalancing_cost_no_sell = df_report.rebalancing_cost_no_sell.sum()
         total_core_after_rebalancing = self.total_core_portfolio_value + total_rebalancing_cost_no_sell
