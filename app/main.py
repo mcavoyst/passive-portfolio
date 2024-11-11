@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 import logging
 import warnings
 from dotenv import load_dotenv
@@ -5,7 +7,7 @@ from portfolio import Portfolio
 from tabulate import tabulate
 warnings.filterwarnings("ignore")
 
-DATA_FILE = 'data/portfolio_data.csv'
+DATA_FILE = 'example/portfolio_data.csv'
 
 logging.basicConfig(
     level=logging.DEBUG, 
@@ -19,14 +21,9 @@ logger = logging.getLogger(__name__)
 
 def main():
     """
-    Main function to run the portfolio update application. This function handles:
-    - Loading environment variables using dotenv.
-    - Asking the user if they want to update stock prices.
-    - Initializing the Portfolio object.
-    - Displaying the portfolio table.
-    - Allowing the user to update stock quantities.
-    - Generating and displaying a no-sell rebalancing report.
-    - Saving the portfolio data if requested by the user.
+    The main entry point for the application. Handles user interaction, portfolio 
+    updates, and data display. Allows the user to choose if they want to update stock 
+    prices, update stock quantities, and generate a no-sell report.
     """
     load_dotenv()
 
