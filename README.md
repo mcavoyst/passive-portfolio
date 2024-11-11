@@ -87,14 +87,14 @@ Finally, to save the changes made to the closing price and the actual quantities
 Do you want to save and overwrite? (y/n)
 ```
 
-Configuration
+## Configuration
 You can adjust various settings in config.py to match your preferences, such as transaction limits or minimum cash reserve.
 
-Example
+## Example
 Data in `/example` can be used to start and to check desired formatting.
 
-Contributing
+## Contributing
 Feel free to submit issues or pull requests to improve the functionality or add new features.
 
-License
+## License
 This project is licensed under the MIT License.
