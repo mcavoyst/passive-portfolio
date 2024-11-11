@@ -7,7 +7,7 @@ from portfolio import Portfolio
 from tabulate import tabulate
 warnings.filterwarnings("ignore")
 
-DATA_FILE = 'example/portfolio_data.csv'
+DATA_FILE = 'data/portfolio_data.csv'
 
 logging.basicConfig(
     level=logging.DEBUG, 
