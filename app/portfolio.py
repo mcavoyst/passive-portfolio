@@ -46,24 +46,24 @@ class Portfolio():
         - data_filepath (str): The relative path to the portfolio data CSV file.
         - update_prices (bool): Flag to determine whether to update stock prices upon initialization.
         """
-        self._load_portfolio(data_filepath)
+        self.portfolio = self._load_portfolio(data_filepath)
         self.exchange_rate = get_exchange_rate()
         if update_prices:
             logger.info("Updating prices as requested on initialization")
-            self.update_prices()
-        self._load_model()
-        self._calculate_total_value()
-        self._core_satellite_portfolio_split()
-        self._rebalance_calculation()
+            self.portfolio = self._update_prices(portfolio=self.portfolio)
+        self.model_portfolio = self._load_model()
+        self.portfolio = self._calculate_total_value(portfolio=self.portfolio)
+        self.core_portfolio, self.satellite_portfolio = self._core_satellite_portfolio_split(portfolio=self.portfolio)
+        self.core_portfolio = self._rebalance(self.core_portfolio)
 
     def _load_portfolio(self, data_filepath) -> None:
         data_filepath = os.path.join(ROOT_DIR, data_filepath)
         logger.info("Initializing Portfolio with filepath: %s", data_filepath)
         self.filepath = data_filepath
-        df = pd.read_csv(data_filepath, index_col='ticker')
-        df.update_date = pd.to_datetime(df.update_date)
-        self.portfolio = df
+        portfolio = pd.read_csv(data_filepath, index_col='ticker')
+        portfolio.update_date = pd.to_datetime(portfolio.update_date)
         logger.debug("Loaded portfolio data")
+        return portfolio
 
     def _load_model(self) -> None:
         """
@@ -75,14 +75,15 @@ class Portfolio():
         """
         logger.debug("Loading model portfolio")
         model_path = os.path.join(ROOT_DIR, 'data/model_portfolio.csv')
-        self.model_portfolio = pd.read_csv(model_path, index_col='ticker')
-        total = self.model_portfolio.sum()['target_allocation']
+        model_portfolio = pd.read_csv(model_path, index_col='ticker')
+        total = model_portfolio.sum()['target_allocation']
         
         if round(total, 2) != 1.00:
             logger.error("Model portfolio allocations sum to %s, expected 1.00", total)
             raise ValueError("Check allocations in model portfolio")
         else:
             logger.info("Model portfolio allocations validated")
+        return model_portfolio
 
     def save_portfolio(self):
         """
@@ -91,33 +92,47 @@ class Portfolio():
         logger.info("Saving portfolio data to %s", self.filepath)
         self.portfolio.to_csv(self.filepath, index_label='ticker')
 
-    def _core_satellite_portfolio_split(self):
+    def _core_satellite_portfolio_split(self, portfolio: pd.DataFrame) -> tuple:
         """
         Splits the portfolio into core and satellite segments based on the model portfolio.
         It also calculates the actual allocation of the core portfolio and updates the 
         core and satellite portfolio values.
         """
         logger.debug("Splitting portfolio into core and satellite")
-        self.core_portfolio = self.portfolio.loc[self.model_portfolio.index].copy()
-        self.satellite_portfolio = self.portfolio.loc[~self.portfolio.index.isin(self.model_portfolio.index)]
-        self.total_core_portfolio_value = self.core_portfolio.total_value.sum()
-        self.total_satellite_portfolio_value = self.satellite_portfolio.total_value.sum()
-        self.core_portfolio['actual_allocation'] = self.core_portfolio['total_value'] / self.total_core_portfolio_value
-        self.core_portfolio = pd.merge(self.core_portfolio, self.model_portfolio, left_index=True, right_index=True)
         
-    def _rebalance_calculation(self):
+        core_portfolio = portfolio.loc[self.model_portfolio.index].copy()
+        satellite_portfolio = portfolio.loc[~portfolio.index.isin(self.model_portfolio.index)]
+        total_core_portfolio_value = core_portfolio.total_value.sum()
+        total_satellite_portfolio_value = satellite_portfolio.total_value.sum()
+        core_portfolio['actual_allocation'] = core_portfolio['total_value'] / total_core_portfolio_value
+        core_portfolio = pd.merge(core_portfolio, self.model_portfolio, left_index=True, right_index=True)
+        return core_portfolio, satellite_portfolio
+
+        # self.core_portfolio = self.portfolio.loc[self.model_portfolio.index].copy()
+        # self.satellite_portfolio = self.portfolio.loc[~self.portfolio.index.isin(self.model_portfolio.index)]
+        # self.total_core_portfolio_value = self.core_portfolio.total_value.sum()
+        # self.total_satellite_portfolio_value = self.satellite_portfolio.total_value.sum()
+        # self.core_portfolio['actual_allocation'] = self.core_portfolio['total_value'] / self.total_core_portfolio_value
+        # self.core_portfolio = pd.merge(self.core_portfolio, self.model_portfolio, left_index=True, right_index=True)
+
+
+
+    def _rebalance(self, core_portfolio: pd.DataFrame) -> pd.DataFrame:
         """
         Calculates the rebalance quantities and costs for the core portfolio. It determines 
         the target quantity of each stock based on the target allocation and calculates 
         the rebalance quantity and cost.
         """
-        self.core_portfolio['target_value'] = self.core_portfolio['target_allocation'] * self.total_core_portfolio_value 
-        self.core_portfolio['target_quantity'] = self.core_portfolio['target_value']  / self.core_portfolio['closing_price']
-        self.core_portfolio['target_quantity']= self.core_portfolio['target_quantity'].apply(np.ceil)
-        self.core_portfolio['rebalance_quantity'] = self.core_portfolio['target_quantity'] - self.core_portfolio['quantity']
-        self.core_portfolio['rebalancing_cost'] = self.core_portfolio['rebalance_quantity'] * self.core_portfolio['closing_price']
+        logger.debug("Calculating rebalancing quantities and costs")
 
-        self.best_stock = self.core_portfolio[self.core_portfolio.rebalancing_cost == self.core_portfolio.rebalancing_cost.min()]
+        total_core_portfolio_value = core_portfolio.total_value.sum()
+        core_portfolio['target_value'] = core_portfolio['target_allocation']* total_core_portfolio_value
+        core_portfolio['target_quantity'] = core_portfolio['target_value'] / core_portfolio['closing_price']
+        core_portfolio['target_quantity'] = core_portfolio['target_quantity'].apply(np.ceil)
+        core_portfolio['rebalance_quantity'] = core_portfolio['target_quantity'] - core_portfolio['quantity']
+        core_portfolio['rebalancing_cost'] = core_portfolio['rebalance_quantity'] * core_portfolio['closing_price']
+        core_portfolio.sort_values(by='rebalancing_cost', ascending=False, inplace=True)
+        return core_portfolio
 
     def update_quantity(self, ticker: str, quantity: int) -> None:
         """
@@ -131,25 +146,25 @@ class Portfolio():
         if ticker in self.portfolio.index.values:
             logger.info("Updating quantity for ticker %s to %d", ticker, quantity)
             self.portfolio.loc[self.portfolio.index == ticker, 'quantity'] = quantity
-            self._calculate_total_value()
-            self._core_satellite_portfolio_split()
-            self._rebalance_calculation()
+            self.portfolio = self._calculate_total_value(portfolio=self.portfolio)
+            self.core_portfolio, self.satellite_portfolio = self._core_satellite_portfolio_split(portfolio=self.portfolio)
+            self.core_portfolio = self._rebalance(self.core_portfolio)
         else:
             logger.warning("Ticker %s not found in current portfolio", ticker)
 
-    def _calculate_total_value(self):
+    def _calculate_total_value(self, portfolio: pd.DataFrame) -> pd.DataFrame:
         """
         Calculates the total value of each stock in the portfolio and updates the 
         total value in both local and CAD currencies.
         """
         logger.debug("Updating CAD values with exchange rate: %s", self.exchange_rate)
-        self.portfolio['total_value'] = self.portfolio['closing_price'] * self.portfolio['quantity']
-        self.portfolio.loc[self.portfolio['currency'] == 'USD', 'total_value_cad'] = self.portfolio['total_value'] * self.exchange_rate
-        self.portfolio.loc[self.portfolio['currency'] == 'CAD', 'total_value_cad'] = self.portfolio['total_value']
+        portfolio['total_value'] = portfolio['closing_price'] * portfolio['quantity']
+        portfolio.loc[portfolio['currency'] == 'USD', 'total_value_cad'] = portfolio['total_value'] * self.exchange_rate
+        portfolio.loc[portfolio['currency'] == 'CAD', 'total_value_cad'] = portfolio['total_value']
         logger.debug("Updated portfolio with CAD values")
-        return self.portfolio
+        return portfolio
 
-    def update_prices(self):
+    def _update_prices(self, portfolio: pd.DataFrame) -> pd.DataFrame:
         """
         Updates the stock prices in the portfolio by calling an external stock pricing service.
         It checks if the prices need to be updated and applies changes to the portfolio data.
@@ -157,66 +172,91 @@ class Portfolio():
         logger.info("Updating portfolio prices")
         stock_pricer = StockPricer()
         try:
-            self.portfolio[['closing_price_new', 'update_date_new']] = self.portfolio.apply(
+            portfolio[['closing_price_new', 'update_date_new']] = portfolio.apply(
                     lambda x: stock_pricer.get_price(x.name, x['exchange']), axis=1).apply(pd.Series) 
         except ValueError as e:
             logger.error('Failed to update stock prices %s', e)
             print('Failed to update stock prices. API may be at request limit.')
-            return self.portfolio
+            return portfolio
         
-        logger.debug("Price update results:\n%s", self.portfolio[['closing_price_new', 'update_date_new']])
+        logger.debug("Price update results:\n%s", portfolio[['closing_price_new', 'update_date_new']])
         
         try:
-            self.portfolio['closing_price'] = np.where(
-                self.portfolio.update_date < self.portfolio.update_date_new,
-                self.portfolio.closing_price_new,
-                self.portfolio.closing_price)
+            portfolio['closing_price'] = np.where(
+                portfolio.update_date < portfolio.update_date_new,
+                portfolio.closing_price_new,
+                portfolio.closing_price)
             
-            self.portfolio['update_date'] = np.where(
-                self.portfolio.update_date < self.portfolio.update_date_new,
-                self.portfolio.update_date_new,
-                self.portfolio.update_date)
+            portfolio['update_date'] = np.where(
+                portfolio.update_date < portfolio.update_date_new,
+                portfolio.update_date_new,
+                portfolio.update_date)
             
             logger.info("Prices updated where applicable")
             # self.portfolio.drop(columns=['closing_price_new', 'update_date_new'], inplace=True)
-            return self.portfolio
+            return portfolio
         except Exception as e:
             logger.error('Failed to update prices for any ticker error:%s', e)
-            return self.portfolio
+            return portfolio
 
-    def _rebalance_no_sell(self) -> None:
+    def _rebalance_no_sell(self, core_portfolio: pd.DataFrame) -> pd.DataFrame:
         """
         Calculates the rebalance quantities and costs without selling stocks, 
         and sorts the portfolio by rebalancing cost for better efficiency.
         """
-        logger.info("Best performing stock for rebalance is %s", self.best_stock.index[0])
+        best_stock = core_portfolio[core_portfolio.rebalancing_cost == core_portfolio.rebalancing_cost.min()]
+        logger.info("Best performing stock for rebalance is %s", best_stock.index[0])
 
-        max_rebalanced_value = self.best_stock.total_value.iloc[0] / self.best_stock.target_allocation.iloc[0]
+        max_rebalanced_value = best_stock.total_value.iloc[0] / best_stock.target_allocation.iloc[0]
 
-        self.core_portfolio['fractional_value_no_sell'] = self.core_portfolio['target_allocation'] * max_rebalanced_value
-        self.core_portfolio['target_quantity_no_sell'] = self.core_portfolio['fractional_value_no_sell'] / self.core_portfolio['closing_price']
-        self.core_portfolio['target_quantity_no_sell'] = self.core_portfolio['target_quantity_no_sell'].apply(np.ceil).astype(int)
-        self.core_portfolio['rebalance_quantity_no_sell'] = self.core_portfolio['target_quantity_no_sell'] - self.core_portfolio['quantity']
-        self.core_portfolio['rebalance_quantity_no_sell'] = self.core_portfolio['rebalance_quantity_no_sell'].astype(int)
-        self.core_portfolio['rebalancing_cost_no_sell'] = self.core_portfolio['rebalance_quantity_no_sell'] * self.core_portfolio['closing_price']
-        self.core_portfolio.sort_values(by='rebalancing_cost_no_sell', ascending=False)
-
+        core_portfolio['fractional_value_no_sell'] = core_portfolio['target_allocation'] * max_rebalanced_value
+        core_portfolio['target_quantity_no_sell'] = core_portfolio['fractional_value_no_sell'] / core_portfolio['closing_price']
+        core_portfolio['target_quantity_no_sell'] = core_portfolio['target_quantity_no_sell'].apply(np.ceil).astype(int)
+        core_portfolio['rebalance_quantity_no_sell'] = core_portfolio['target_quantity_no_sell'] - core_portfolio['quantity']
+        core_portfolio['rebalance_quantity_no_sell'] = core_portfolio['rebalance_quantity_no_sell'].astype(int)
+        core_portfolio['rebalancing_cost_no_sell'] = core_portfolio['rebalance_quantity_no_sell'] * core_portfolio['closing_price']
+        core_portfolio.sort_values(by='rebalancing_cost_no_sell', ascending=False)
+        return core_portfolio
 
     def no_sell_report(self) -> None:
         """
         Generates and prints a report of the portfolio rebalancing costs without selling 
         any stocks. It includes the new target quantity and rebalancing costs.
         """
-        self._rebalance_no_sell()
+        self.core_portfolio = self._rebalance_no_sell(core_portfolio=self.core_portfolio)
         df_report = self.core_portfolio.filter(['quantity', 'closing_price',
         'target_quantity_no_sell', 'rebalance_quantity_no_sell',
        'rebalancing_cost_no_sell','update_date', ]).sort_values(by = 'rebalancing_cost_no_sell', ascending=False)
         
+        total_core_portfolio_value = self.core_portfolio.total_value.sum()
+        total_satellite_portfolio_value = self.satellite_portfolio.total_value.sum()
+        
         total_rebalancing_cost_no_sell = df_report.rebalancing_cost_no_sell.sum()
-        total_core_after_rebalancing = self.total_core_portfolio_value + total_rebalancing_cost_no_sell
-        total_after_rebalancing = self.total_satellite_portfolio_value + total_core_after_rebalancing
+        total_core_after_rebalancing = total_core_portfolio_value + total_rebalancing_cost_no_sell
+        total_after_rebalancing = total_satellite_portfolio_value + total_core_after_rebalancing
 
         print(tabulate(df_report, headers="keys", tablefmt="pretty"))
         print(f"The cost to rebalance the core portfolio is ${round(total_rebalancing_cost_no_sell, 2)}\n"
             f"\nThis would make the total value of the portfolio: ${round(total_core_after_rebalancing, 2)}")
         print(f"The total value of satellite and core portfolio after rebalancing would be ${round(total_after_rebalancing, 2)}")
+
+
+    def spend_money_scenario(self, money_to_spend: float) -> None:
+        """
+        Simulates a scenario where a specified amount of money is spent on the best performing stock.
+        
+        Args:
+        - amount (float): The amount of money to be spent on the best performing stock.
+        """
+
+        df_save  = self.core_portfolio.copy()
+        while len(self.core_portfolio) > 0:
+            # sort by rebalancing cost
+            self.core_portfolio = self.core_portfolio[self.core_portfolio['closing_price'] <= money_to_spend]
+            # index where rebalncing cost is max
+            purchase = self.core_portfolio[self.core_portfolio['rebalancing_cost'] == self.core_portfolio['rebalancing_cost'].max()]['closing_price'].values[0]
+            self.core_portfolio.loc[self.core_portfolio['rebalancing_cost'] == self.core_portfolio['rebalancing_cost'].max(), 
+                                    'quantity'] = self.core_portfolio[self.core_portfolio['rebalancing_cost'] == self.core_portfolio['rebalancing_cost'].max()]['quantity'] + 1
+            money_to_spend = money_to_spend - purchase
+            
+        self.core_portfolio = df_save
