@@ -11,7 +11,7 @@ class StockPricer():
         pass
 
     def get_price(self, ticker:str, exchange:str) -> str:
-        
+        logger.debug('Getting price for %s on %s', ticker, exchange)
         load_dotenv()
         params = {
             'access_key': os.environ.get('PRICE_API_KEY')
@@ -25,7 +25,7 @@ class StockPricer():
         try:
             logger.debug('Getting price for %s on %s', ticker, exchange)
             api_result = requests.get(f'{PRICE_API_URL}/{ticker_exchange}/eod/latest',params, timeout=30)
-            logger.info('Received response for  %s', ticker_exchange)
+            logger.info('Received %s response for  %s', api_result.status_code, ticker_exchange)
             api_response = api_result.json()
 
             close = api_response['close']
