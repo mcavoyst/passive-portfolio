@@ -172,8 +172,13 @@ class Portfolio():
                 self.portfolio.closing_price_new,
                 self.portfolio.closing_price)
             
+            self.portfolio['update_date'] = np.where(
+                self.portfolio.update_date < self.portfolio.update_date_new,
+                self.portfolio.update_date_new,
+                self.portfolio.update_date)
+            
             logger.info("Prices updated where applicable")
-            self.portfolio.drop(columns=['closing_price_new', 'update_date_new'], inplace=True)
+            # self.portfolio.drop(columns=['closing_price_new', 'update_date_new'], inplace=True)
             return self.portfolio
         except Exception as e:
             logger.error('Failed to update prices for any ticker error:%s', e)
