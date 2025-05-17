@@ -46,11 +46,7 @@ class Portfolio():
         - data_filepath (str): The relative path to the portfolio data CSV file.
         - update_prices (bool): Flag to determine whether to update stock prices upon initialization.
         """
-        data_filepath = os.path.join(ROOT_DIR, data_filepath)
-        logger.info("Initializing Portfolio with filepath: %s", data_filepath)
-        self.filepath = data_filepath
-        self.portfolio = pd.read_csv(data_filepath, index_col='ticker')
-        logger.debug("Loaded portfolio data")
+        self._load_portfolio(data_filepath)
         self.exchange_rate = get_exchange_rate()
         if update_prices:
             logger.info("Updating prices as requested on initialization")
@@ -59,6 +55,15 @@ class Portfolio():
         self._calculate_total_value()
         self._core_satellite_portfolio_split()
         self._rebalance_calculation()
+
+    def _load_portfolio(self, data_filepath) -> None:
+        data_filepath = os.path.join(ROOT_DIR, data_filepath)
+        logger.info("Initializing Portfolio with filepath: %s", data_filepath)
+        self.filepath = data_filepath
+        df = pd.read_csv(data_filepath, index_col='ticker')
+        df.update_date = pd.to_datetime(df.update_date)
+        self.portfolio = df
+        logger.debug("Loaded portfolio data")
 
     def _load_model(self) -> None:
         """
