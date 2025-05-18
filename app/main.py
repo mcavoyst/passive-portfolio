@@ -60,8 +60,25 @@ def main():
             print('Invalid entry, that ticker is not currently in the portfolio')
 
     p.no_sell_report()
+
+    print('\nDo you have money you want to invest?')
     
-    save_file = input('Do you want to save and overwrite? (y/n) ').lower()
+    running = True
+    while running:
+        invest = input('If yes, type the amount. If no, type "n" ').lower()
+        if invest == 'n':
+            running = False
+            break
+        else:
+            try:
+                invest = float(invest)
+                p.spend_money_scenario(invest)
+                running = False
+            except ValueError as e:
+                logger.warning('Investment amount is not entered as float %s', e)
+                print("Invalid entry. Investment amount must be a number")
+    
+    save_file = input('\nDo you want to save and overwrite? (y/n) ').lower()
     if save_file == 'y':
         p.save_portfolio()
 

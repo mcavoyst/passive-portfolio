@@ -248,15 +248,39 @@ class Portfolio():
         Args:
         - amount (float): The amount of money to be spent on the best performing stock.
         """
+        logger.info("Simulating spend money scenario with %s", money_to_spend)
+        original_money_to_spend = money_to_spend
+        if money_to_spend <= 0:
+            logger.warning("Money to spend must be greater than zero")
+            return
+        
+        scenario_portfolio  = self.core_portfolio.copy()
 
-        df_save  = self.core_portfolio.copy()
-        while len(self.core_portfolio) > 0:
-            # sort by rebalancing cost
-            self.core_portfolio = self.core_portfolio[self.core_portfolio['closing_price'] <= money_to_spend]
+        storage_dataframe = pd.DataFrame(columns=['quantity', 'purchase_cost'], index=scenario_portfolio.index)
+        storage_dataframe['quantity'] = 0
+        storage_dataframe['purchase_cost'] = 0.0
+        
+        while len(scenario_portfolio) > 0:
+            logger.info("Start scenario with money to spend: %s", money_to_spend)
+            # logger.debug("Current portfolio:\n%s", scenario_portfolio)
+            scenario_portfolio = scenario_portfolio[scenario_portfolio['closing_price'] <= money_to_spend]
             # index where rebalncing cost is max
-            purchase = self.core_portfolio[self.core_portfolio['rebalancing_cost'] == self.core_portfolio['rebalancing_cost'].max()]['closing_price'].values[0]
-            self.core_portfolio.loc[self.core_portfolio['rebalancing_cost'] == self.core_portfolio['rebalancing_cost'].max(), 
-                                    'quantity'] = self.core_portfolio[self.core_portfolio['rebalancing_cost'] == self.core_portfolio['rebalancing_cost'].max()]['quantity'] + 1
-            money_to_spend = money_to_spend - purchase
-            
-        self.core_portfolio = df_save
+            ticker_to_buy = scenario_portfolio[scenario_portfolio['rebalancing_cost'] == scenario_portfolio['rebalancing_cost'].max()].index[0]
+            purchase_cost = scenario_portfolio.loc[ticker_to_buy]['closing_price']
+            scenario_portfolio.loc[ticker_to_buy, 'quantity'] += 1
+            money_to_spend = money_to_spend - purchase_cost
+            scenario_portfolio = self._calculate_total_value(portfolio=scenario_portfolio)
+            scenario_portfolio = self._rebalance(scenario_portfolio)
+            scenario_portfolio = self._rebalance_no_sell(scenario_portfolio)
+            logger.info('Spent %s on %s', purchase_cost, ticker_to_buy)
+
+            storage_dataframe.loc[ticker_to_buy, 'quantity'] += 1
+            storage_dataframe.loc[ticker_to_buy, 'purchase_cost'] += purchase_cost
+
+            scenario_portfolio = scenario_portfolio[scenario_portfolio['closing_price'] <= money_to_spend]
+        
+        storage_dataframe['unit_cost'] = storage_dataframe['purchase_cost'] / storage_dataframe['quantity']
+        print('\nThe following can be purchased with %s\n' % original_money_to_spend)
+        print(tabulate(storage_dataframe, headers="keys", tablefmt="pretty"))
+        print(f"Total spent: {round(storage_dataframe['purchase_cost'].sum(),2)}")
+
