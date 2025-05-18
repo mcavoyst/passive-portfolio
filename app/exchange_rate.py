@@ -8,6 +8,19 @@ from config import ROOT_DIR
 
 logger = logging.getLogger(__name__)
 def get_exchange_rate(backup_filepath= 'data/exchange_rate.txt')->float:
+    """
+    Fetches the current exchange rate from USD to CAD using the Exchange Rates API.
+    If the API call fails, it retrieves the exchange rate from a backup file.
+
+    Args:
+        backup_filepath (str): The relative path to the backup file containing the exchange rate.
+
+    Returns:
+        float: The exchange rate from USD to CAD.
+
+    Raises:
+        TimeoutError: If the API request times out.
+    """
     load_dotenv()
     abs_backup_filepath = os.path.join(ROOT_DIR, backup_filepath)
     time.sleep(.5)

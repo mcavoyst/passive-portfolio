@@ -7,6 +7,23 @@ PRICE_API_URL='http://api.marketstack.com/v1/tickers'
 
 logger = logging.getLogger(__name__)
 class StockPricer():
+    """
+    A class to retrieve the latest stock prices using the MarketStack API.
+
+    Methods:
+    --------
+    get_price(ticker: str, exchange: str) -> str:
+        Fetches the latest closing price and update date for a given stock ticker 
+        and exchange. Handles different exchange formats and logs the process.
+
+    Usage:
+    ------
+    1. Ensure the `PRICE_API_KEY` environment variable is set with a valid API key.
+    2. Call `get_price` with the stock ticker and exchange as arguments.
+    3. Returns the closing price and the last updated date if successful, or logs 
+       an error if the request fails.
+    """
+
     def __init__(self) -> None:
         pass
 

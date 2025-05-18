@@ -29,13 +29,16 @@ class Portfolio():
         update_quantity(ticker, quantity): Updates the quantity of a specific stock in the portfolio.
         update_prices(): Updates the prices of stocks in the portfolio.
         no_sell_report(): Generates a report for rebalancing without selling stocks.
+        spend_money_scenario(money_to_spend): Simulates spending a specified amount of money on the portfolio.
 
     Private Methods:
+        _load_portfolio(data_filepath): Loads the portfolio data from a CSV file.
         _load_model(): Loads and validates the model portfolio data.
-        _core_satellite_portfolio_split(): Splits the portfolio into core and satellite parts.
-        _rebalance_calculation(): Calculates the rebalancing quantities and costs.
-        _calculate_total_value(): Calculates the total value of the portfolio in CAD.
-        _rebalance_no_sell(): Calculates rebalancing without selling stocks.
+        _core_satellite_portfolio_split(portfolio): Splits the portfolio into core and satellite parts.
+        _rebalance(core_portfolio): Calculates the rebalancing quantities and costs for the core portfolio.
+        _calculate_total_value(portfolio): Calculates the total value of the portfolio in CAD.
+        _update_prices(portfolio): Updates the stock prices in the portfolio.
+        _rebalance_no_sell(core_portfolio): Calculates rebalancing quantities and costs without selling stocks.
     """
     def __init__(self, data_filepath: str, update_prices: bool) -> None:
         """
@@ -43,8 +46,8 @@ class Portfolio():
         portfolio data, and optionally updating prices based on a flag.
         
         Args:
-        - data_filepath (str): The relative path to the portfolio data CSV file.
-        - update_prices (bool): Flag to determine whether to update stock prices upon initialization.
+            data_filepath (str): The relative path to the portfolio data CSV file.
+            update_prices (bool): Flag to determine whether to update stock prices upon initialization.
         """
         self.portfolio = self._load_portfolio(data_filepath)
         self.exchange_rate = get_exchange_rate()
@@ -57,6 +60,15 @@ class Portfolio():
         self.core_portfolio = self._rebalance(self.core_portfolio)
 
     def _load_portfolio(self, data_filepath) -> None:
+        """
+        Loads the portfolio data from a CSV file.
+
+        Args:
+            data_filepath (str): The relative path to the portfolio data CSV file.
+
+        Returns:
+            DataFrame: The loaded portfolio data.
+        """
         data_filepath = os.path.join(ROOT_DIR, data_filepath)
         logger.info("Initializing Portfolio with filepath: %s", data_filepath)
         self.filepath = data_filepath
@@ -108,15 +120,6 @@ class Portfolio():
         core_portfolio = pd.merge(core_portfolio, self.model_portfolio, left_index=True, right_index=True)
         return core_portfolio, satellite_portfolio
 
-        # self.core_portfolio = self.portfolio.loc[self.model_portfolio.index].copy()
-        # self.satellite_portfolio = self.portfolio.loc[~self.portfolio.index.isin(self.model_portfolio.index)]
-        # self.total_core_portfolio_value = self.core_portfolio.total_value.sum()
-        # self.total_satellite_portfolio_value = self.satellite_portfolio.total_value.sum()
-        # self.core_portfolio['actual_allocation'] = self.core_portfolio['total_value'] / self.total_core_portfolio_value
-        # self.core_portfolio = pd.merge(self.core_portfolio, self.model_portfolio, left_index=True, right_index=True)
-
-
-
     def _rebalance(self, core_portfolio: pd.DataFrame) -> pd.DataFrame:
         """
         Calculates the rebalance quantities and costs for the core portfolio. It determines 
@@ -165,7 +168,7 @@ class Portfolio():
         return portfolio
 
     def _update_prices(self, portfolio: pd.DataFrame) -> pd.DataFrame:
-        """
+         """
         Updates the stock prices in the portfolio by calling an external stock pricing service.
         It checks if the prices need to be updated and applies changes to the portfolio data.
         """
@@ -203,6 +206,12 @@ class Portfolio():
         """
         Calculates the rebalance quantities and costs without selling stocks, 
         and sorts the portfolio by rebalancing cost for better efficiency.
+
+        Args:
+            core_portfolio (DataFrame): The core portfolio data.
+
+        Returns:
+            DataFrame: The updated core portfolio with no-sell rebalancing information.
         """
         best_stock = core_portfolio[core_portfolio.rebalancing_cost == core_portfolio.rebalancing_cost.min()]
         logger.info("Best performing stock for rebalance is %s", best_stock.index[0])
@@ -244,9 +253,9 @@ class Portfolio():
     def spend_money_scenario(self, money_to_spend: float) -> None:
         """
         Simulates a scenario where a specified amount of money is spent on the best performing stock.
-        
+
         Args:
-        - amount (float): The amount of money to be spent on the best performing stock.
+            money_to_spend (float): The amount of money to be spent on the portfolio.
         """
         logger.info("Simulating spend money scenario with %s", money_to_spend)
         original_money_to_spend = money_to_spend
