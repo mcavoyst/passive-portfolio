@@ -7,7 +7,9 @@ Passive Portfolio Rebalancer is a simple command-line tool designed to help you 
 - **Set Target Allocation**: Define your desired allocation by ticker symbol.
 - **Rebalance Suggestions**: Generates buy/sell recommendations to meet the target allocation.
 - **Simple CLI Interface**: Operate entirely from the command line.
-- **Split Core and Satellite Portfolio**: Splits portfolio based on a "core" investing portfolio which will be passively invested vs an actively managed "satellite" portfolio. Rebalancing will only be calculated on the core portfolio.
+- **Split Core and Satellite Portfolio**: Splits portfolio based on a "core" investing portfolio which will be passively invested vs an actively managed "satellite" portfolio. 
+- ***NEW***- **Investment Splitter**: Determine what to purchase to maintain your portfolio's desired asset allocation, without selling
+- Rebalancing will only be calculated on the core portfolio.
 Note:
 The default currency is Canadian Dollars and USD are converted based on the current exchange rate.
 
@@ -66,7 +68,7 @@ If you want to update the quantities of any stock in the list, just input the ti
 ```
 Which stock do you want to update? If none, type "*"
 ```
-Once * is entered the following table will be displayed showing the number of each asset that would need to be purchased to rebalnce the portfolio if you were to not sell any of the existing stock. Additional functionality can be added to show the number of assets to rebalance with buying and selling in the future.
+Once * is entered the following table will be displayed showing the number of each asset that would need to be purchased to rebalance the portfolio if you were to not sell any of the existing stock. Additional functionality can be added to show the number of assets to rebalance with buying and selling in the future.
 ```
 +--------+----------+---------------+-------------------------+----------------------------+--------------------------+---------------------------+
 | ticker | quantity | closing_price | target_quantity_no_sell | rebalance_quantity_no_sell | rebalancing_cost_no_sell |        update_date        |
@@ -81,6 +83,24 @@ The cost to rebalance the core portfolio is $264182.44
 
 This would make the total value of the portfolio: $7255107.64
 The total value of satellite and core portfolio after rebalancing would be $7378134.04
+```
+If you have a set amount you want to invest, enter it here and it will determine how to spend it
+```
+Do you have money you want to invest?
+If yes, type the amount. If no, type "n" 1500
+
+The following can be purchased with 1500.0
+
++--------+----------+---------------+-----------+
+| ticker | quantity | purchase_cost | unit_cost |
++--------+----------+---------------+-----------+
+|  VFV   |   8.0    |    1182.8     |  147.85   |
+|  ZNQ   |   3.0    |    290.46     |   96.82   |
+|  XRE   |   1.0    |     15.19     |   15.19   |
+|  XEF   |   0.0    |      0.0      |    nan    |
+|  XIU   |   0.0    |      0.0      |    nan    |
++--------+----------+---------------+-----------+
+Total spent: 1488.45
 ```
 Finally, to save the changes made to the closing price and the actual quantities of the assets in `portfolio_data.csv` in your portfolio type `y`.
 ```
