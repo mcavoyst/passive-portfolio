@@ -168,7 +168,7 @@ class Portfolio():
         return portfolio
 
     def _update_prices(self, portfolio: pd.DataFrame) -> pd.DataFrame:
-         """
+        """
         Updates the stock prices in the portfolio by calling an external stock pricing service.
         It checks if the prices need to be updated and applies changes to the portfolio data.
         """

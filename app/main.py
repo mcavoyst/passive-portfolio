@@ -43,12 +43,12 @@ def main():
                     headers="keys", tablefmt="pretty"))
 
     while(updating):
-        stock = input('\nWhich stock do you want to update? If none, type "*"').upper()
+        stock = input('\nWhich stock do you want to update? If none, type "*" ').upper()
         if stock == "*":
             updating = False
         elif stock in p.portfolio.index.tolist():
             try:
-                quantity = int(input('What is the new total?'))
+                quantity = int(input('What is the new total? '))
                 p.update_quantity(ticker=stock, quantity=quantity)
             except TypeError as e:
                 logger.warning('Quantity is not entered as integer %s', e)
