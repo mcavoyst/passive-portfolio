@@ -1,6 +1,8 @@
 import os
 import logging
 import requests
+import json
+from config import ROOT_DIR
 from dotenv import load_dotenv
 
 PRICE_API_URL='http://api.marketstack.com/v1/tickers'
@@ -27,7 +29,7 @@ class StockPricer():
     def __init__(self) -> None:
         pass
 
-    def get_price(self, ticker:str, exchange:str) -> str:
+    def get_price(self, ticker:str, exchange:str) -> str|None:
         logger.debug('Getting price for %s on %s', ticker, exchange)
         load_dotenv()
         params = {
@@ -44,6 +46,9 @@ class StockPricer():
             api_result = requests.get(f'{PRICE_API_URL}/{ticker_exchange}/eod/latest',params, timeout=30)
             logger.info('Received %s response for  %s', api_result.status_code, ticker_exchange)
             api_response = api_result.json()
+
+            with open(os.path.join(ROOT_DIR,'tmp', f'{ticker}.json'), "w") as f:
+                json.dump(api_response, f, indent=4)
 
             close = api_response['close']
             updated = api_response['date']
