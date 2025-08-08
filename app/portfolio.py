@@ -177,6 +177,8 @@ class Portfolio():
         try:
             portfolio[['closing_price_new', 'update_date_new']] = portfolio.apply(
                     lambda x: stock_pricer.get_price(x.name, x['exchange']), axis=1).apply(pd.Series) 
+            portfolio['update_date'] = pd.to_datetime(portfolio['update_date'])
+            portfolio['update_date_new'] = pd.to_datetime(portfolio['update_date_new'])
         except ValueError as e:
             logger.error('Failed to update stock prices %s', e)
             print('Failed to update stock prices. API may be at request limit.')

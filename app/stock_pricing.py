@@ -29,7 +29,7 @@ class StockPricer():
     def __init__(self) -> None:
         pass
 
-    def get_price(self, ticker:str, exchange:str) -> str|None:
+    def get_price(self, ticker:str, exchange:str) -> tuple:
         logger.debug('Getting price for %s on %s', ticker, exchange)
         load_dotenv()
         params = {
