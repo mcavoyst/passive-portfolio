@@ -42,4 +42,9 @@ def get_exchange_rate(backup_filepath= 'data/exchange_rate.txt')->float:
         with open(abs_backup_filepath,'r', encoding='utf-8') as f:
             exchange_cad = float(f.read())
         return exchange_cad
+    except KeyError as e:
+        logger.error("Error on exchange rate check. Using backup. Error: %s",e)
+        with open(abs_backup_filepath,'r', encoding='utf-8') as f:
+            exchange_cad = float(f.read())
+        return exchange_cad
 
