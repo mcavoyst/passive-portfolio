@@ -1,0 +1,204 @@
+{% extends "base.html" %}
+{% block content %}
+
+{% if error %}
+  <div class="alert alert-danger">{{ error }}</div>
+{% else %}
+
+<!-- Summary Cards -->
+<div class="row g-3 mb-4">
+  <div class="col-6 col-md-3">
+    <div class="card text-white bg-dark h-100">
+      <div class="card-body">
+        <div class="small text-white-50">Total Portfolio</div>
+        <div class="fs-5 fw-bold">${{ "{:,.2f}".format(total_portfolio) }}</div>
+        <div class="small text-white-50">CAD</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="card text-white bg-primary h-100">
+      <div class="card-body">
+        <div class="small text-white-50">Core Portfolio</div>
+        <div class="fs-5 fw-bold">${{ "{:,.2f}".format(total_core) }}</div>
+        <div class="small text-white-50">CAD</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="card text-white bg-secondary h-100">
+      <div class="card-body">
+        <div class="small text-white-50">Satellite Portfolio</div>
+        <div class="fs-5 fw-bold">${{ "{:,.2f}".format(total_satellite) }}</div>
+        <div class="small text-white-50">CAD</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="card bg-light h-100">
+      <div class="card-body">
+        <div class="small text-muted">USD/CAD Rate</div>
+        <div class="fs-5 fw-bold">{{ exchange_rate }}</div>
+        <div class="small text-muted">Updated {{ last_update }}</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Action Row -->
+<div class="row g-3 mb-4">
+  <!-- Update Prices -->
+  <div class="col-md-4">
+    <div class="card h-100">
+      <div class="card-body">
+        <h6 class="card-title">Update Prices</h6>
+        <p class="text-muted small mb-2">Fetch latest closing prices from the API.</p>
+        <form method="POST" action="{{ url_for('update_prices') }}">
+          <button type="submit" class="btn btn-warning btn-sm">Fetch Latest Prices</button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Update Quantity -->
+  <div class="col-md-4">
+    <div class="card h-100">
+      <div class="card-body">
+        <h6 class="card-title">Update Quantity</h6>
+        <p class="text-muted small mb-2">Set the current number of shares held.</p>
+        <form method="POST" action="{{ url_for('update_quantity') }}">
+          <div class="row g-2 align-items-center">
+            <div class="col-5">
+              <select name="ticker" class="form-select form-select-sm">
+                {% for row in portfolio %}
+                  <option value="{{ row.ticker }}">{{ row.ticker }}</option>
+                {% endfor %}
+              </select>
+            </div>
+            <div class="col-4">
+              <input type="number" name="quantity" class="form-control form-control-sm"
+                     placeholder="Qty" min="0" required>
+            </div>
+            <div class="col-3">
+              <button type="submit" class="btn btn-primary btn-sm w-100">Set</button>
+            </div>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Investment Scenario -->
+  <div class="col-md-4">
+    <div class="card h-100">
+      <div class="card-body">
+        <h6 class="card-title">Investment Scenario</h6>
+        <p class="text-muted small mb-2">Simulate spending a cash amount on the core portfolio.</p>
+        <form method="POST" action="{{ url_for('invest') }}">
+          <div class="row g-2 align-items-center">
+            <div class="col-8">
+              <input type="number" name="amount" class="form-control form-control-sm"
+                     placeholder="Amount (CAD)" min="0.01" step="0.01" required>
+            </div>
+            <div class="col-4">
+              <button type="submit" class="btn btn-success btn-sm w-100">Run</button>
+            </div>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Holdings Table -->
+<div class="card mb-4 shadow-sm">
+  <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center py-2">
+    <span class="fw-semibold">Current Holdings</span>
+  </div>
+  <div class="table-responsive">
+    <table class="table table-sm table-striped table-hover mb-0 align-middle">
+      <thead class="table-dark">
+        <tr>
+          <th>Ticker</th>
+          <th class="text-end">Shares</th>
+          <th class="text-end">Price</th>
+          <th class="text-end">Total Value</th>
+          <th>Currency</th>
+          <th>Updated</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in portfolio %}
+        <tr>
+          <td class="fw-semibold">{{ row.ticker }}</td>
+          <td class="text-end">{{ "{:,}".format(row.quantity | int) }}</td>
+          <td class="text-end">${{ "{:,.2f}".format(row.closing_price) }}</td>
+          <td class="text-end">${{ "{:,.2f}".format(row.total_value) }}</td>
+          <td><span class="badge bg-secondary">{{ row.currency }}</span></td>
+          <td class="text-muted small">{{ row.update_date }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Rebalancing Report -->
+<div class="card mb-4 shadow-sm">
+  <div class="card-header bg-primary text-white py-2">
+    <span class="fw-semibold">Rebalancing Report (No-Sell)</span>
+  </div>
+  <div class="card-body pb-0">
+    <div class="row g-2 mb-3">
+      <div class="col-sm-4">
+        <div class="p-2 rounded bg-warning bg-opacity-10 border border-warning-subtle">
+          <div class="small text-muted">Cost to rebalance</div>
+          <div class="fw-bold">${{ "{:,.2f}".format(total_rebalancing_cost) }} CAD</div>
+        </div>
+      </div>
+      <div class="col-sm-4">
+        <div class="p-2 rounded bg-primary bg-opacity-10 border border-primary-subtle">
+          <div class="small text-muted">Core after rebalancing</div>
+          <div class="fw-bold">${{ "{:,.2f}".format(total_after_rebalancing - total_satellite) }} CAD</div>
+        </div>
+      </div>
+      <div class="col-sm-4">
+        <div class="p-2 rounded bg-success bg-opacity-10 border border-success-subtle">
+          <div class="small text-muted">Total after rebalancing</div>
+          <div class="fw-bold">${{ "{:,.2f}".format(total_after_rebalancing) }} CAD</div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="table-responsive">
+    <table class="table table-sm table-striped table-hover mb-0 align-middle">
+      <thead class="table-dark">
+        <tr>
+          <th>Ticker</th>
+          <th class="text-end">Current Shares</th>
+          <th class="text-end">Price</th>
+          <th class="text-end">Target Shares</th>
+          <th class="text-end">Shares to Buy</th>
+          <th class="text-end">Rebalancing Cost</th>
+          <th>Updated</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in rebalance %}
+        <tr {% if row.rebalance_quantity_no_sell > 0 %}class="table-success"{% endif %}>
+          <td class="fw-semibold">{{ row.ticker }}</td>
+          <td class="text-end">{{ "{:,}".format(row.quantity | int) }}</td>
+          <td class="text-end">${{ "{:,.2f}".format(row.closing_price) }}</td>
+          <td class="text-end">{{ "{:,}".format(row.target_quantity_no_sell | int) }}</td>
+          <td class="text-end fw-semibold">{{ row.rebalance_quantity_no_sell | int }}</td>
+          <td class="text-end">${{ "{:,.2f}".format(row.rebalancing_cost_no_sell) }}</td>
+          <td class="text-muted small">{{ row.update_date }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+{% endif %}
+{% endblock %}

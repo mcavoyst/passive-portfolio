@@ -1,0 +1,17 @@
+body {
+  font-size: 0.9rem;
+}
+
+.navbar {
+  margin-bottom: 0;
+}
+
+.table th {
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.card {
+  border-radius: 0.5rem;
+}
